@@ -21,7 +21,8 @@ VECTOR is the vector on which the BODY operates. Evaluated once only"
   (iter-vector (((x vec1)
                  (y vec2)
                  ...)
-                (i from below step))
+                (i from below step)
+                result)
       (setf (x i) (+ (x i) (y i))))
 
 In BINDINGS each symbol is MACROLET-bound to '(aref vector i)' of each vector.
@@ -182,7 +183,7 @@ Does not allocate any extra space"
 (defgeneric zeros (specs)
   (:documentation "Produce the array of zeros based on specification"))
 
-(defmethod zeros ((specs fixnum))
+(defmethod zeros (#-clisp(specs fixnum) #+clisp(specs integer))
   (make-array specs :initial-element 0))
 
 (defmethod zeros ((specs array))
@@ -194,12 +195,15 @@ Does not allocate any extra space"
 
 (defun zeros! (array)
   "Set all items of the ARRAY to zero"
-  (let ((length (reduce #'* (array-dimensions array)))
-        (element-type (array-element-type array)))
+  (let* ((length (reduce #'* (array-dimensions array)))
+         (element-type (array-element-type array))
+         (zero-element (coerce 0 element-type)))
     (dotimes (i length)
-      (setf (row-major-aref array i) (coerce 0 element-type)))))
+      (setf (row-major-aref array i) zero-element))))
 
 (defun vector-elementwise (destination function vector &rest more-vectors)
+  "Applies FUNCTION to corresponding elements of supplied vectors. Result of function
+  application is put into corresponding element in DESTINATION"
   (dotimes (i (length destination))
     (setf (aref destination i)
           (apply function (aref vector i) (mapcar (lambda (v) (aref v i)) more-vectors)))))
